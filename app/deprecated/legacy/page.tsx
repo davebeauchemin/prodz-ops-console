@@ -7,6 +7,7 @@
 import Link from "next/link";
 import { useState } from "react";
 import { SETTER_TO_SHEET_TAB } from "@/lib/deprecated/mapping";
+import { ThemeSwitcher } from "@/components/theme-switcher";
 
 function formatDateLocal(d: Date): string {
   const y = d.getFullYear();
@@ -160,9 +161,12 @@ export default function LegacyReportPage() {
           </p>
         </div>
 
-        <h1 className="text-2xl font-semibold text-zinc-900 dark:text-zinc-100">
-          Monday Export (Legacy)
-        </h1>
+        <div className="flex items-center justify-between">
+          <h1 className="text-2xl font-semibold text-zinc-900 dark:text-zinc-100">
+            Monday Export (Legacy)
+          </h1>
+          <ThemeSwitcher />
+        </div>
         <p className="text-zinc-600 dark:text-zinc-400">
           Fetch setter daily reports from Monday.com for a date range. Copy the
           table and paste into your spreadsheet.

@@ -12,6 +12,14 @@ import {
   PopoverTrigger,
 } from "@/components/ui/popover";
 import { buttonVariants } from "@/components/ui/button";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { ThemeSwitcher } from "@/components/theme-switcher";
 import { cn } from "@/lib/utils";
 
 function formatDateLocal(d: Date): string {
@@ -151,10 +159,13 @@ export default function Home() {
 
   return (
     <div className="flex min-h-screen flex-col items-center justify-center bg-zinc-50 font-sans dark:bg-zinc-950">
-      <main className="flex w-full max-w-4xl flex-col gap-6 rounded-xl bg-white p-8 shadow-sm dark:bg-zinc-900">
-        <h1 className="text-2xl font-semibold text-zinc-900 dark:text-zinc-100">
-          Monday Export
-        </h1>
+      <main className="relative flex w-full max-w-4xl flex-col gap-6 rounded-xl bg-white p-8 shadow-sm dark:bg-zinc-900">
+        <div className="flex items-center justify-between">
+          <h1 className="text-2xl font-semibold text-zinc-900 dark:text-zinc-100">
+            Monday Export
+          </h1>
+          <ThemeSwitcher />
+        </div>
         <p className="text-zinc-600 dark:text-zinc-400">
           Fetch setter daily reports from Monday.com for a date range. Copy the
           table and paste into your spreadsheet.{" "}
@@ -234,18 +245,21 @@ export default function Home() {
             >
               Setter
             </label>
-            <select
-              id="setter"
+            <Select
               value={setter}
-              onChange={(e) => setSetter(e.target.value)}
-              className="rounded-lg border border-zinc-300 px-3 py-2 text-zinc-900 dark:border-zinc-600 dark:bg-zinc-800 dark:text-zinc-100"
+              onValueChange={(v) => v != null && setSetter(v)}
             >
-              {SETTER_OPTIONS.map((s) => (
-                <option key={s} value={s}>
-                  {s}
-                </option>
-              ))}
-            </select>
+              <SelectTrigger id="setter" className="w-[180px]">
+                <SelectValue placeholder="Select setter" />
+              </SelectTrigger>
+              <SelectContent>
+                {SETTER_OPTIONS.map((s) => (
+                  <SelectItem key={s} value={s}>
+                    {s}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
         </div>
 
