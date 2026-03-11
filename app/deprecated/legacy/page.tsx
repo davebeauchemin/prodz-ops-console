@@ -5,9 +5,11 @@
  * @deprecated Use main report at / for new Monday table schema.
  */
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { SETTER_TO_SHEET_TAB } from "@/lib/deprecated/mapping";
 import { ThemeSwitcher } from "@/components/theme-switcher";
+import { LogOut } from "lucide-react";
 
 function formatDateLocal(d: Date): string {
   const y = d.getFullYear();
@@ -99,6 +101,7 @@ function rowsToTSVWithoutDate(rows: TableRow[]): string {
 }
 
 export default function LegacyReportPage() {
+  const router = useRouter();
   const today = formatDateLocal(new Date());
   const [startDate, setStartDate] = useState(today);
   const [endDate, setEndDate] = useState(today);
@@ -129,6 +132,16 @@ export default function LegacyReportPage() {
       setError(e instanceof Error ? e.message : "Request failed");
     } finally {
       setLoading(false);
+    }
+  }
+
+  async function handleLogout() {
+    try {
+      await fetch("/api/auth/logout", { method: "POST" });
+      router.push("/login");
+      router.refresh();
+    } catch {
+      router.push("/login");
     }
   }
 
@@ -165,7 +178,17 @@ export default function LegacyReportPage() {
           <h1 className="text-2xl font-semibold text-zinc-900 dark:text-zinc-100">
             Monday Export (Legacy)
           </h1>
-          <ThemeSwitcher />
+          <div className="flex items-center gap-2">
+            <ThemeSwitcher />
+            <button
+              type="button"
+              onClick={handleLogout}
+              aria-label="Log out"
+              className="rounded-lg p-2 text-zinc-600 hover:bg-zinc-100 hover:text-zinc-900 dark:text-zinc-400 dark:hover:bg-zinc-800 dark:hover:text-zinc-100"
+            >
+              <LogOut className="size-4" />
+            </button>
+          </div>
         </div>
         <p className="text-zinc-600 dark:text-zinc-400">
           Fetch setter daily reports from Monday.com for a date range. Copy the
