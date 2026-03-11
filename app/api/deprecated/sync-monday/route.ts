@@ -1,10 +1,13 @@
+/**
+ * @deprecated Use /api/sync-monday (v2) for new Monday table schema.
+ */
 import { NextResponse } from "next/server";
-import { fetchAllItemsInDateRange } from "@/lib/monday";
+import { fetchAllItemsInDateRange } from "@/lib/deprecated/monday";
 import {
   aggregateItems,
   aggregatedToTableRow,
   SETTER_TO_SHEET_TAB,
-} from "@/lib/mapping";
+} from "@/lib/deprecated/mapping";
 import { datesInRange } from "@/lib/dates";
 
 const DEBUG = process.env.DEBUG_SYNC === "true";
@@ -17,17 +20,12 @@ function debug(...args: unknown[]) {
 
 export async function POST(request: Request) {
   try {
-    debug("POST /api/sync-monday started");
+    debug("POST /api/deprecated/sync-monday started");
     const body = await request.json().catch(() => ({}));
     const startDate = body.startDate;
     const endDate = body.endDate;
     const setter = body.setter;
-    debug("Request body:", {
-      startDate,
-      endDate,
-      setter,
-      bodyKeys: Object.keys(body),
-    });
+    debug("Request body:", { startDate, endDate, setter, bodyKeys: Object.keys(body) });
 
     if (!startDate || typeof startDate !== "string") {
       return NextResponse.json(
@@ -49,11 +47,11 @@ export async function POST(request: Request) {
     }
 
     const apiToken = process.env.MONDAY_API_TOKEN;
-    const boardId = process.env.MONDAY_BOARD_ID;
+    const boardId = process.env.MONDAY_BOARD_ID_DEPRECATED;
 
     if (!apiToken || !boardId) {
       return NextResponse.json(
-        { error: "Missing env: MONDAY_API_TOKEN or MONDAY_BOARD_ID" },
+        { error: "Missing env: MONDAY_API_TOKEN or MONDAY_BOARD_ID_DEPRECATED" },
         { status: 500 }
       );
     }
@@ -70,17 +68,7 @@ export async function POST(request: Request) {
       );
     }
 
-    const rows: {
-      date: string;
-      dials: number;
-      pickedUp: number;
-      callBooked: number;
-      rappelMoi: number;
-      dq: number;
-      fup: number;
-      showedCall: number;
-      close: number;
-    }[] = [];
+    const rows: { date: string; dials: number; pickedUp: number; callBooked: number; rappelMoi: number; dq: number; fup: number; showedCall: number; close: number }[] = [];
 
     const itemsByDate = await fetchAllItemsInDateRange(
       apiToken,

@@ -1,51 +1,34 @@
-Voici les custom fields et leurs options pour le tableau Setters Reports (groupe "Daily Report") :
+1. Setter (dropdown)
 
-Name
-Type : name
+Dave Beauchemin
+David Bélanger
+Rosalie Dulac
 
-Date
-Type : date
+2. Status (status)
 
-Setter
-Type : dropdown
-Options : Dave Beauchemin, David Bélanger
+Not synced to Google Sheet
+Synced to Google Sheet
+Stuck
 
-Call Status
-Type : dropdown
-Options : Call Connected, Call Not Connected, No Call Made, Inbound Call
+3. Action Taken (status)
 
-Actions
-Type : dropdown
-Options :
-
-Follow-up - SMS Sent
-Follow-up - Email Sent
-Prospection - Appointment Booked
-Prospection - Appointment Confirmed
-Prospection - Appointment Rescheduled
-Lead Qualified
-Lead Disqualified
-Email Reply Received
-SMS Reply Received
-Consultation - Appointment Booked
-Consultation - Appointment Confirmed
-Consultation - Appointment Rescheduled
-Finalisation - Appointment Booked
-Finalisation - Appointment Confirmed
-Finalisation - Appointment Rescheduled
 SMS Sent
+Dial - Picked-up
+Dial - Not Connected
 Email Sent
-Follow-up - Call Made
-Call Made
-Call Made - Not Connected with Lead
+(option vide)
 
-Contact Link
-Type : text
+4. Action Result (dropdown)
 
-Status
-Type : status
-Options : Working on it (orange), Done (vert), Stuck (rouge)
+Scheduled Prospecting Meeting
+Scheduled Consultation Appointment
+Disqualified
+Follow-Up
+Showed Call
 
-Lead Lifecycle
-Type : dropdown
-Options : New Lead, Existing Lead
+Autres champs :
+
+Name (name)
+Date (date)
+Lead Name (text)
+GHL Link (text)

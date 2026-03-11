@@ -1,25 +1,18 @@
 "use client";
 
+/**
+ * Legacy report using old Monday schema (Call Status, Actions, Lead Lifecycle).
+ * @deprecated Use main report at / for new Monday table schema.
+ */
 import Link from "next/link";
 import { useState } from "react";
-import { format, parseISO } from "date-fns";
-import { CalendarIcon } from "lucide-react";
-import { SETTER_TO_SHEET_TAB } from "@/lib/mapping";
-import { Calendar } from "@/components/ui/calendar";
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from "@/components/ui/popover";
-import { buttonVariants } from "@/components/ui/button";
-import { cn } from "@/lib/utils";
+import { SETTER_TO_SHEET_TAB } from "@/lib/deprecated/mapping";
 
 function formatDateLocal(d: Date): string {
-  return format(d, "yyyy-MM-dd");
-}
-
-function parseDateLocal(s: string): Date {
-  return parseISO(s);
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, "0");
+  const day = String(d.getDate()).padStart(2, "0");
+  return `${y}-${m}-${day}`;
 }
 
 const SETTER_OPTIONS = Object.values(SETTER_TO_SHEET_TAB);
@@ -104,7 +97,7 @@ function rowsToTSVWithoutDate(rows: TableRow[]): string {
   return rows.map((r) => rowToCellsWithoutDate(r).join("\t")).join("\n");
 }
 
-export default function Home() {
+export default function LegacyReportPage() {
   const today = formatDateLocal(new Date());
   const [startDate, setStartDate] = useState(today);
   const [endDate, setEndDate] = useState(today);
@@ -120,7 +113,7 @@ export default function Home() {
     setResult(null);
     setCopyStatus(null);
     try {
-      const res = await fetch("/api/sync-monday", {
+      const res = await fetch("/api/deprecated/sync-monday", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ startDate, endDate, setter }),
@@ -152,18 +145,27 @@ export default function Home() {
   return (
     <div className="flex min-h-screen flex-col items-center justify-center bg-zinc-50 font-sans dark:bg-zinc-950">
       <main className="flex w-full max-w-4xl flex-col gap-6 rounded-xl bg-white p-8 shadow-sm dark:bg-zinc-900">
+        <div className="rounded-lg border border-amber-200 bg-amber-50 p-4 dark:border-amber-800 dark:bg-amber-950/30">
+          <p className="text-sm font-medium text-amber-800 dark:text-amber-200">
+            Legacy Report (deprecated)
+          </p>
+          <p className="mt-1 text-sm text-amber-700 dark:text-amber-300">
+            This report uses the old Monday.com table schema.{" "}
+            <Link
+              href="/"
+              className="font-medium underline underline-offset-2 hover:no-underline"
+            >
+              Switch to the new report
+            </Link>
+          </p>
+        </div>
+
         <h1 className="text-2xl font-semibold text-zinc-900 dark:text-zinc-100">
-          Monday Export
+          Monday Export (Legacy)
         </h1>
         <p className="text-zinc-600 dark:text-zinc-400">
           Fetch setter daily reports from Monday.com for a date range. Copy the
-          table and paste into your spreadsheet.{" "}
-          <Link
-            href="/deprecated/legacy"
-            className="text-zinc-500 underline underline-offset-2 hover:no-underline dark:text-zinc-400"
-          >
-            Legacy report (deprecated)
-          </Link>
+          table and paste into your spreadsheet.
         </p>
 
         <div className="flex flex-wrap gap-6">
@@ -174,28 +176,13 @@ export default function Home() {
             >
               Start date
             </label>
-            <Popover>
-              <PopoverTrigger
-                id="startDate"
-                className={cn(
-                  buttonVariants({ variant: "outline" }),
-                  "h-9 w-[220px] justify-start px-3 text-left font-normal"
-                )}
-              >
-                <CalendarIcon className="mr-2 size-4" />
-                {startDate
-                  ? format(parseDateLocal(startDate), "MMM d, yyyy")
-                  : "Pick a date"}
-              </PopoverTrigger>
-              <PopoverContent className="w-auto p-0" align="start">
-                <Calendar
-                  mode="single"
-                  selected={parseDateLocal(startDate)}
-                  onSelect={(date) => date && setStartDate(formatDateLocal(date))}
-                  initialFocus
-                />
-              </PopoverContent>
-            </Popover>
+            <input
+              id="startDate"
+              type="date"
+              value={startDate}
+              onChange={(e) => setStartDate(e.target.value)}
+              className="rounded-lg border border-zinc-300 px-3 py-2 text-zinc-900 dark:border-zinc-600 dark:bg-zinc-800 dark:text-zinc-100"
+            />
           </div>
           <div className="flex flex-col gap-2">
             <label
@@ -204,28 +191,13 @@ export default function Home() {
             >
               End date
             </label>
-            <Popover>
-              <PopoverTrigger
-                id="endDate"
-                className={cn(
-                  buttonVariants({ variant: "outline" }),
-                  "h-9 w-[220px] justify-start px-3 text-left font-normal"
-                )}
-              >
-                <CalendarIcon className="mr-2 size-4" />
-                {endDate
-                  ? format(parseDateLocal(endDate), "MMM d, yyyy")
-                  : "Pick a date"}
-              </PopoverTrigger>
-              <PopoverContent className="w-auto p-0" align="start">
-                <Calendar
-                  mode="single"
-                  selected={parseDateLocal(endDate)}
-                  onSelect={(date) => date && setEndDate(formatDateLocal(date))}
-                  initialFocus
-                />
-              </PopoverContent>
-            </Popover>
+            <input
+              id="endDate"
+              type="date"
+              value={endDate}
+              onChange={(e) => setEndDate(e.target.value)}
+              className="rounded-lg border border-zinc-300 px-3 py-2 text-zinc-900 dark:border-zinc-600 dark:bg-zinc-800 dark:text-zinc-100"
+            />
           </div>
           <div className="flex flex-col gap-2">
             <label
@@ -291,7 +263,7 @@ export default function Home() {
                       onClick={() => handleCopyMonth(monthKey, monthRows)}
                       className="rounded-lg border border-zinc-300 px-3 py-1.5 text-sm font-medium text-zinc-700 hover:bg-zinc-100 dark:border-zinc-600 dark:text-zinc-300 dark:hover:bg-zinc-800"
                     >
-                      Copy Data
+                      Copy (no date)
                     </button>
                   </div>
                   <div className="overflow-x-auto rounded-lg border border-zinc-200 dark:border-zinc-700">

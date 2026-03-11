@@ -1,99 +1,102 @@
 /**
- * Mapping from Monday.com Setters Reports board to Google Sheet columns.
- * LEAD ADS section only. rappelMoi and showedCall left empty.
+ * Mapping from Monday.com v2 table (Action Taken, Action Result) to output columns.
+ * See documents/monday-setter-report.md and documents/govente-xlsx.md.
  */
 
-/** Monday actions ending in "Appointment Booked" */
-const CALL_BOOKED_ACTIONS = [
-  "Prospection - Appointment Booked",
-  "Consultation - Appointment Booked",
-  "Finalisation - Appointment Booked",
-];
+/** Action Taken values that count as Dials (outbound calls) */
+const DIALS_ACTIONS = ["Dial - Picked-up", "Dial - Not Connected"];
 
-/** Monday actions that count as FUP */
-const FUP_ACTIONS = [
-  "Follow-up - SMS Sent",
-  "Follow-up - Email Sent",
-  "Follow-up - Call Made",
-];
+/** Action Taken that counts as Picked-up */
+const PICKED_UP_ACTION = "Dial - Picked-up";
 
-/** Setter name (from Monday) -> Google Sheet tab name */
+/** Action Result contains (Call booked - Consultation) */
+const CALL_BOOKED_CONTAINS = "Scheduled Consultation Appointment";
+
+/** Action Result contains (Rappel moi - Prospection Meeting/Call) */
+const RAPPEL_MOI_CONTAINS = "Scheduled Prospecting";
+
+/** Action Result contains (DQ) */
+const DQ_CONTAINS = "Disqualified";
+
+/** Action Result contains (FUP) */
+const FUP_CONTAINS = "Follow-Up";
+
+/** Action Result contains (Showed call) */
+const SHOWED_CALL_CONTAINS = "Showed Call";
+
+/** Setter name (from Monday) -> Sheet tab name */
 export const SETTER_TO_SHEET_TAB: Record<string, string> = {
   "Dave Beauchemin": "Dave",
   "David Bélanger": "David",
+  "Rosalie Dulac": "Rosalie",
 };
 
 export interface AggregatedRow {
   dials: number;
   pickedUp: number;
   callBooked: number;
+  rappelMoi: number;
   dq: number;
   fup: number;
+  showedCall: number;
+  close: number;
 }
 
 export interface MondayItem {
   setter: string;
-  callStatus: string;
-  actions: string[];
-  leadLifecycle: string;
+  actionTaken: string[];
+  actionResult: string;
+  leadName?: string;
 }
 
-/**
- * Aggregate Monday items into counts for the Google Sheet LEAD ADS columns.
- * Columns E (rappelMoi) and H (showedCall) are left empty per plan.
- */
 export function aggregateItems(items: MondayItem[]): AggregatedRow {
   let dials = 0;
   let pickedUp = 0;
   let callBooked = 0;
+  let rappelMoi = 0;
   let dq = 0;
-  let fup = 0;
+  let showedCall = 0;
+  const fupLeads = new Set<string>();
 
-  for (const item of items) {
-    // Dials = items where a call was made (Call Status = Call Connected or Call Not Connected)
-    if (
-      item.callStatus === "Call Connected" ||
-      item.callStatus === "Call Not Connected"
-    ) {
-      dials += 1;
-    }
+  for (let i = 0; i < items.length; i++) {
+    const item = items[i];
+    const hasDialAction = item.actionTaken.some((a) => DIALS_ACTIONS.includes(a));
+    if (hasDialAction) dials += 1;
 
-    // Picked-up = Call Status = "Call Connected"
-    if (item.callStatus === "Call Connected") {
-      pickedUp += 1;
-    }
+    if (item.actionTaken.includes(PICKED_UP_ACTION)) pickedUp += 1;
 
-    // FUP = items (once per item) with Lead Lifecycle = "Existing Lead" and at least one FUP action
-    const hasFupAction = item.actions.some((a) => FUP_ACTIONS.includes(a));
-    const isExistingLead =
-      item.leadLifecycle === "Existing Lead" ||
-      item.leadLifecycle === "Lead Existant";
-    if (isExistingLead && hasFupAction) {
-      fup += 1;
-    }
+    if (item.actionResult.includes(CALL_BOOKED_CONTAINS)) callBooked += 1;
+    if (item.actionResult.includes(RAPPEL_MOI_CONTAINS)) rappelMoi += 1;
+    if (item.actionResult.includes(DQ_CONTAINS)) dq += 1;
+    if (item.actionResult.includes(SHOWED_CALL_CONTAINS)) showedCall += 1;
 
-    for (const action of item.actions) {
-      if (CALL_BOOKED_ACTIONS.includes(action)) callBooked += 1;
-      if (action === "Lead Disqualified") dq += 1;
+    if (item.actionResult.includes(FUP_CONTAINS)) {
+      const key = item.leadName?.trim() || `item-${i}`;
+      fupLeads.add(key);
     }
   }
 
-  return { dials, pickedUp, callBooked, dq, fup };
+  return {
+    dials,
+    pickedUp,
+    callBooked,
+    rappelMoi,
+    dq,
+    fup: fupLeads.size,
+    showedCall,
+    close: 0,
+  };
 }
 
-/**
- * Values for the export table: Dials, Picked-up, Call booked, Rappel moi, DQ, FUP, Showed call, Close.
- * Rappel moi, Showed call, Close default to 0 (not sourced from Monday).
- */
 export function aggregatedToTableRow(agg: AggregatedRow): number[] {
   return [
     agg.dials,
     agg.pickedUp,
     agg.callBooked,
-    0, // Rappel moi - 0 for now
+    agg.rappelMoi,
     agg.dq,
     agg.fup,
-    0, // Showed call - 0 for now
-    0, // Close - 0 for now
+    agg.showedCall,
+    agg.close,
   ];
 }

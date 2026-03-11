@@ -1,6 +1,5 @@
 /**
- * Fetch Monday.com v2 table (Action Taken, Action Result schema).
- * See documents/monday-setter-report.md.
+ * @deprecated Use lib/monday.ts (v2) for new Monday table schema.
  */
 import type { MondayItem } from "./mapping";
 
@@ -72,7 +71,7 @@ function parseDropdownValue(cv: MondayColumnValue): string | string[] {
   }
 }
 
-function parseActionTakenValue(cv: MondayColumnValue): string[] {
+function parseActionsValue(cv: MondayColumnValue): string[] {
   const v = parseDropdownValue(cv);
   if (Array.isArray(v)) return v.filter(Boolean);
   if (typeof v === "string" && v) {
@@ -84,43 +83,51 @@ function parseActionTakenValue(cv: MondayColumnValue): string[] {
   return [];
 }
 
-function parseActionResultValue(cv: MondayColumnValue): string {
-  const v = parseDropdownValue(cv);
-  return Array.isArray(v) ? (v[0] ?? "") : (v ? String(v) : "");
-}
+function parseItem(
+  item: MondayItemRaw,
+  targetDate: string,
+  dateCol: MondayColumnValue | undefined,
+  setterCol: MondayColumnValue | undefined,
+  callStatusCol: MondayColumnValue | undefined,
+  actionsCol: MondayColumnValue | undefined,
+  leadLifecycleCol: MondayColumnValue | undefined
+): MondayItem | null {
+  const itemDate = dateCol ? parseDateFromValue(dateCol.value) : null;
+  if (itemDate !== targetDate) return null;
 
-function parseTextValue(cv: MondayColumnValue): string {
-  if (cv.text) return cv.text;
-  try {
-    const parsed = JSON.parse(cv.value || "{}");
-    if (typeof parsed.text === "string") return parsed.text;
-    return "";
-  } catch {
-    return "";
-  }
+  const setter = setterCol ? String(parseDropdownValue(setterCol)) : "";
+  const callStatus = callStatusCol
+    ? String(parseDropdownValue(callStatusCol))
+    : "";
+  const actions = actionsCol ? parseActionsValue(actionsCol) : [];
+  const leadLifecycle = leadLifecycleCol
+    ? String(parseDropdownValue(leadLifecycleCol))
+    : "";
+
+  return { setter, callStatus, actions, leadLifecycle };
 }
 
 function parseItemWithDate(
   item: MondayItemRaw,
   dateCol: MondayColumnValue | undefined,
   setterCol: MondayColumnValue | undefined,
-  actionTakenCol: MondayColumnValue | undefined,
-  actionResultCol: MondayColumnValue | undefined,
-  leadNameCol: MondayColumnValue | undefined
+  callStatusCol: MondayColumnValue | undefined,
+  actionsCol: MondayColumnValue | undefined,
+  leadLifecycleCol: MondayColumnValue | undefined
 ): (MondayItem & { date: string }) | null {
   const itemDate = dateCol ? parseDateFromValue(dateCol.value) : null;
   if (!itemDate) return null;
 
   const setter = setterCol ? String(parseDropdownValue(setterCol)) : "";
-  const actionTaken = actionTakenCol
-    ? parseActionTakenValue(actionTakenCol)
-    : [];
-  const actionResult = actionResultCol
-    ? parseActionResultValue(actionResultCol)
+  const callStatus = callStatusCol
+    ? String(parseDropdownValue(callStatusCol))
     : "";
-  const leadName = leadNameCol ? parseTextValue(leadNameCol) : "";
+  const actions = actionsCol ? parseActionsValue(actionsCol) : [];
+  const leadLifecycle = leadLifecycleCol
+    ? String(parseDropdownValue(leadLifecycleCol))
+    : "";
 
-  return { setter, actionTaken, actionResult, leadName, date: itemDate };
+  return { setter, callStatus, actions, leadLifecycle, date: itemDate };
 }
 
 async function fetchColumnIds(
@@ -157,23 +164,16 @@ async function fetchColumnIds(
   return map;
 }
 
-/**
- * Fetch all items in date range from v2 Monday board.
- * Columns: Date, Setter, Action Taken, Action Result, Lead Name.
- * No group filter (v2 schema may differ).
- */
-export async function fetchAllItemsInDateRange(
+export async function fetchItemsByDate(
   apiToken: string,
   boardId: string,
-  startDate: string,
-  endDate: string
-): Promise<Map<string, MondayItem[]>> {
-  const start = startDate.includes("T")
-    ? startDate.split("T")[0]
-    : startDate.split(" ")[0];
-  const end = endDate.includes("T")
-    ? endDate.split("T")[0]
-    : endDate.split(" ")[0];
+  date: string
+): Promise<MondayItem[]> {
+  const targetDate = date.includes("T")
+    ? date.split("T")[0]
+    : date.split(" ")[0];
+  const allItems: MondayItem[] = [];
+  let cursor: string | null = null;
 
   const columnIds = await fetchColumnIds(apiToken, boardId);
   const idFor = (title: string) =>
@@ -182,9 +182,125 @@ export async function fetchAllItemsInDateRange(
     )?.[0];
   const dateColId = idFor("Date");
   const setterColId = idFor("Setter");
-  const actionTakenColId = idFor("Action Taken");
-  const actionResultColId = idFor("Action Result");
-  const leadNameColId = idFor("Lead Name");
+  const callStatusColId = idFor("Call Status");
+  const actionsColId = idFor("Actions");
+  const leadLifecycleColId = idFor("Lead Lifecycle");
+
+  const findCol = (cols: MondayColumnValue[], colId: string | undefined) =>
+    colId ? cols.find((c) => c.id === colId) : undefined;
+
+  do {
+    const query = cursor
+      ? `
+        query {
+          next_items_page(cursor: ${JSON.stringify(cursor)}) {
+            cursor
+            items {
+              id
+              name
+              group { title }
+              column_values { id value text }
+            }
+          }
+        }
+      `
+      : `
+        query {
+          boards(ids: ${boardId}) {
+            items_page {
+              cursor
+              items {
+                id
+                name
+                group { title }
+                column_values { id value text }
+              }
+            }
+          }
+        }
+      `;
+
+    const res = await fetch(MONDAY_API_URL, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: apiToken,
+      },
+      body: JSON.stringify({ query }),
+    });
+
+    const json = (await safeJsonFromResponse(res)) as MondayBoardResponse;
+    if (json.errors?.length) {
+      throw new Error(`Monday API error: ${json.errors[0].message}`);
+    }
+
+    let items: MondayItemRaw[] = [];
+    let nextCursor: string | null = null;
+
+    if (cursor) {
+      const page = (json as { data?: { next_items_page: { cursor: string | null; items: MondayItemRaw[] } } }).data?.next_items_page;
+      if (page) {
+        items = page.items ?? [];
+        nextCursor = page.cursor;
+      }
+    } else {
+      const boards = json.data?.boards;
+      if (!boards?.length) return [];
+      const board = boards[0];
+      const page = board.items_page;
+      items = page?.items ?? [];
+      nextCursor = page?.cursor ?? null;
+    }
+
+    const dailyReportItems = items.filter(
+      (item) => item.group?.title?.toLowerCase() === "daily report"
+    );
+
+    for (const item of dailyReportItems) {
+      const cols = item.column_values ?? [];
+      const dateCol = findCol(cols, dateColId);
+      const setterCol = findCol(cols, setterColId);
+      const callStatusCol = findCol(cols, callStatusColId);
+      const actionsCol = findCol(cols, actionsColId);
+      const leadLifecycleCol = findCol(cols, leadLifecycleColId);
+
+      const parsed = parseItem(
+        item,
+        targetDate,
+        dateCol,
+        setterCol,
+        callStatusCol,
+        actionsCol,
+        leadLifecycleCol
+      );
+      if (parsed) allItems.push(parsed);
+    }
+
+    cursor = nextCursor;
+  } while (cursor);
+
+  return allItems;
+}
+
+export async function fetchAllItemsInDateRange(
+  apiToken: string,
+  boardId: string,
+  startDate: string,
+  endDate: string
+): Promise<Map<string, MondayItem[]>> {
+  const start = startDate.includes("T") ? startDate.split("T")[0] : startDate.split(" ")[0];
+  const end = endDate.includes("T") ? endDate.split("T")[0] : endDate.split(" ")[0];
+
+  const columnIds = await fetchColumnIds(apiToken, boardId);
+  const idFor = (title: string) =>
+    Object.entries(columnIds).find(
+      ([, t]) => t?.toLowerCase() === title.toLowerCase()
+    )?.[0];
+  const dateColId = idFor("Date");
+  const setterColId = idFor("Setter");
+  const callStatusColId = idFor("Call Status");
+  const actionsColId = idFor("Actions");
+  const leadLifecycleColId = idFor("Lead Lifecycle");
 
   const findCol = (cols: MondayColumnValue[], colId: string | undefined) =>
     colId ? cols.find((c) => c.id === colId) : undefined;
@@ -241,9 +357,7 @@ export async function fetchAllItemsInDateRange(
     let nextCursor: string | null = null;
 
     if (cursor) {
-      const page = (json as {
-        data?: { next_items_page: { cursor: string | null; items: MondayItemRaw[] } };
-      }).data?.next_items_page;
+      const page = (json as { data?: { next_items_page: { cursor: string | null; items: MondayItemRaw[] } } }).data?.next_items_page;
       if (page) {
         items = page.items ?? [];
         nextCursor = page.cursor;
@@ -257,21 +371,25 @@ export async function fetchAllItemsInDateRange(
       nextCursor = page?.cursor ?? null;
     }
 
-    for (const item of items) {
+    const dailyReportItems = items.filter(
+      (item) => item.group?.title?.toLowerCase() === "daily report"
+    );
+
+    for (const item of dailyReportItems) {
       const cols = item.column_values ?? [];
       const dateCol = findCol(cols, dateColId);
       const setterCol = findCol(cols, setterColId);
-      const actionTakenCol = findCol(cols, actionTakenColId);
-      const actionResultCol = findCol(cols, actionResultColId);
-      const leadNameCol = findCol(cols, leadNameColId);
+      const callStatusCol = findCol(cols, callStatusColId);
+      const actionsCol = findCol(cols, actionsColId);
+      const leadLifecycleCol = findCol(cols, leadLifecycleColId);
 
       const parsed = parseItemWithDate(
         item,
         dateCol,
         setterCol,
-        actionTakenCol,
-        actionResultCol,
-        leadNameCol
+        callStatusCol,
+        actionsCol,
+        leadLifecycleCol
       );
       if (!parsed) continue;
 
