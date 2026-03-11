@@ -26,7 +26,7 @@ export default function LoginPage() {
         setError(data.error ?? "Login failed");
         return;
       }
-      router.push("/");
+      router.push("/setter-report");
       router.refresh();
     } catch {
       setError("Request failed");
@@ -40,12 +40,12 @@ export default function LoginPage() {
       <main className="relative flex w-full max-w-md flex-col gap-6 rounded-xl bg-white p-8 shadow-sm dark:bg-zinc-900">
         <div className="flex items-center justify-between">
           <h1 className="text-2xl font-semibold text-zinc-900 dark:text-zinc-100">
-            GHL Tracker Login
+            Prodz Ops Console Login
           </h1>
           <ThemeSwitcher />
         </div>
         <p className="text-zinc-600 dark:text-zinc-400">
-          Enter the password to access the GHL Tracker App.
+          Enter the password to access the Prodz Ops Console.
         </p>
         <form onSubmit={handleSubmit} className="flex flex-col gap-4">
           <div className="flex flex-col gap-2">

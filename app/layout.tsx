@@ -17,8 +17,8 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "GHL Tracker",
-  description: "Monday.com setter report export",
+  title: "Prodz Ops Console",
+  description: "Prodz Ops Console - Monday.com setter report export",
 };
 
 export default function RootLayout({

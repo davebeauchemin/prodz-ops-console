@@ -2,7 +2,7 @@
 
 /**
  * Legacy report using old Monday schema (Call Status, Actions, Lead Lifecycle).
- * @deprecated Use main report at / for new Monday table schema.
+ * @deprecated Use main report at /setter-report for new Monday table schema.
  */
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -166,7 +166,7 @@ export default function LegacyReportPage() {
           <p className="mt-1 text-sm text-amber-700 dark:text-amber-300">
             This report uses the old Monday.com table schema.{" "}
             <Link
-              href="/"
+              href="/setter-report"
               className="font-medium underline underline-offset-2 hover:no-underline"
             >
               Switch to the new report
@@ -176,7 +176,7 @@ export default function LegacyReportPage() {
 
         <div className="flex items-center justify-between">
           <h1 className="text-2xl font-semibold text-zinc-900 dark:text-zinc-100">
-            Monday Export (Legacy)
+            Prodz Ops Console (Legacy)
           </h1>
           <div className="flex items-center gap-2">
             <ThemeSwitcher />

@@ -4,7 +4,7 @@ export interface SessionData {
   isLoggedIn: boolean;
 }
 
-export const SESSION_COOKIE_NAME = "ghl-tracker-session";
+export const SESSION_COOKIE_NAME = "prodz-ops-console-session";
 const TTL = 60 * 60 * 24 * 7; // 7 days
 export const SESSION_TTL = TTL;
 
