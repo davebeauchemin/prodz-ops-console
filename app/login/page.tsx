@@ -1,12 +1,13 @@
 "use client";
 
-import { useState } from "react";
-import { useRouter } from "next/navigation";
+import { Suspense, useState } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import { ThemeSwitcher } from "@/components/theme-switcher";
 import { Button } from "@/components/ui/button";
 
-export default function LoginPage() {
+function LoginForm() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
@@ -26,7 +27,14 @@ export default function LoginPage() {
         setError(data.error ?? "Login failed");
         return;
       }
-      router.push("/setter-report");
+      const redirectTo = searchParams.get("redirect");
+      const destination: string =
+        redirectTo?.startsWith("/") &&
+          !redirectTo.startsWith("//") &&
+          redirectTo !== "/login"
+          ? redirectTo
+          : "/setter-report";
+      router.push(destination);
       router.refresh();
     } catch {
       setError("Request failed");
@@ -79,5 +87,13 @@ export default function LoginPage() {
         </form>
       </main>
     </div>
+  );
+}
+
+export default function LoginPage() {
+  return (
+    <Suspense fallback={<div className="flex min-h-screen items-center justify-center">Loading…</div>}>
+      <LoginForm />
+    </Suspense>
   );
 }

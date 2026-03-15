@@ -21,12 +21,16 @@ export async function proxy(request: NextRequest) {
 
   const cookieValue = request.cookies.get(SESSION_COOKIE_NAME)?.value;
   if (!cookieValue) {
-    return NextResponse.redirect(new URL("/login", request.url));
+    const loginUrl = new URL("/login", request.url);
+    loginUrl.searchParams.set("redirect", request.nextUrl.pathname);
+    return NextResponse.redirect(loginUrl);
   }
 
   const session = await decodeSession(cookieValue);
   if (!session?.isLoggedIn) {
-    return NextResponse.redirect(new URL("/login", request.url));
+    const loginUrl = new URL("/login", request.url);
+    loginUrl.searchParams.set("redirect", request.nextUrl.pathname);
+    return NextResponse.redirect(loginUrl);
   }
 
   return NextResponse.next();
