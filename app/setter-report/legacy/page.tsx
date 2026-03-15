@@ -8,8 +8,6 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { SETTER_TO_SHEET_TAB } from "@/lib/deprecated/mapping";
-import { ThemeSwitcher } from "@/components/theme-switcher";
-import { LogOut } from "lucide-react";
 
 function formatDateLocal(d: Date): string {
   const y = d.getFullYear();
@@ -135,16 +133,6 @@ export default function LegacyReportPage() {
     }
   }
 
-  async function handleLogout() {
-    try {
-      await fetch("/api/auth/logout", { method: "POST" });
-      router.push("/login");
-      router.refresh();
-    } catch {
-      router.push("/login");
-    }
-  }
-
   async function handleCopyMonth(monthKey: string, rows: TableRow[]) {
     const tsv = rowsToTSVWithoutDate(rows);
     try {
@@ -157,8 +145,7 @@ export default function LegacyReportPage() {
   }
 
   return (
-    <div className="flex min-h-screen flex-col items-center justify-center bg-zinc-50 font-sans dark:bg-zinc-950">
-      <main className="flex w-full max-w-4xl flex-col gap-6 rounded-xl bg-white p-8 shadow-sm dark:bg-zinc-900">
+    <div className="flex w-full max-w-4xl flex-col gap-6 rounded-xl bg-white p-8 shadow-sm dark:bg-zinc-900">
         <div className="rounded-lg border border-amber-200 bg-amber-50 p-4 dark:border-amber-800 dark:bg-amber-950/30">
           <p className="text-sm font-medium text-amber-800 dark:text-amber-200">
             Legacy Report (deprecated)
@@ -174,22 +161,6 @@ export default function LegacyReportPage() {
           </p>
         </div>
 
-        <div className="flex items-center justify-between">
-          <h1 className="text-2xl font-semibold text-zinc-900 dark:text-zinc-100">
-            Prodz Ops Console (Legacy)
-          </h1>
-          <div className="flex items-center gap-2">
-            <ThemeSwitcher />
-            <button
-              type="button"
-              onClick={handleLogout}
-              aria-label="Log out"
-              className="rounded-lg p-2 text-zinc-600 hover:bg-zinc-100 hover:text-zinc-900 dark:text-zinc-400 dark:hover:bg-zinc-800 dark:hover:text-zinc-100"
-            >
-              <LogOut className="size-4" />
-            </button>
-          </div>
-        </div>
         <p className="text-zinc-600 dark:text-zinc-400">
           Fetch setter daily reports from Monday.com for a date range. Copy the
           table and paste into your spreadsheet.
@@ -355,7 +326,6 @@ export default function LegacyReportPage() {
             No data for the selected range.
           </p>
         )}
-      </main>
     </div>
   );
 }
